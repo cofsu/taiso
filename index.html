@@ -83,7 +83,8 @@ DEF.forEach(g=>g.items.forEach((it,i)=>{it.id=g.id+(i+1);it.url=""}));
 let S={groups:DEF,log:{}},view="home",gid=null,edit=false,cm=new Date();cm.setDate(1);
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
 let link="",copied=false;
-try{const m=location.hash.match(/^#m=(.+)$/);if(m){const p=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));if(Array.isArray(p)&&p.length){S.groups=p;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}history.replaceState(null,"",location.pathname+location.search)}}}catch(e){}
+try{const m=location.hash.match(/^#m=(.+)$/);if(m){const p=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));if(Array.isArray(p)&&p.length){S.groups=p;S.patient=true;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}history.replaceState(null,"",location.pathname+location.search)}}}catch(e){}
+try{if(location.hash==="#teacher"){S.patient=false;localStorage.setItem(KEY,JSON.stringify(S));history.replaceState(null,"",location.pathname+location.search)}}catch(e){}
 const panel=()=>`<div class="item" style="margin-top:16px"><h3>患者さん用リンク</h3><p class="sub">「この患者さんに出す」にチェックした体操だけが入ったリンクを作ります。</p><button class="btn small" data-act="mk">リンクを作る</button>${link?`<textarea id="lk" rows="4" readonly>${esc(link)}</textarea><button class="btn ghost small" data-act="cp">${copied?'コピーしました':'コピー'}</button><p class="note">このリンクをLINEなどで患者さんに送ってください。開くと、選んだ体操だけが表示されます。</p>`:''}</div>`;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const pad=n=>String(n).padStart(2,"0");
@@ -106,11 +107,11 @@ function home(){const a=all(),n=done(T).filter(id=>a.some(i=>i.id===id)).length,
 return`<h1>おうち体操</h1><p class="sub">${new Date().toLocaleDateString("ja-JP",{month:"long",day:"numeric",weekday:"long"})}</p>
 <div class="today">${MARU(72,ok)}<div><b style="font-size:20px">${ok?'今日の体操は全部できました':'今日は '+n+' / '+a.length+' 完了'}</b><p class="sub">連続 ${streak()} 日</p></div></div>
 <div class="grid">${S.groups.filter(g=>edit||vis(g).length).map(g=>{const c=g.items.filter(i=>i.on!==false&&isDone(T,i.id)).length,t=g.items.filter(i=>i.on!==false).length;return`<button class="tile" data-act="grp" data-id="${g.id}"><b>${esc(g.name)}</b><div><span class="sub">今日 ${c} / ${t}</span><div class="bar"><i style="width:${t?c/t*100:0}%"></i></div></div></button>`}).join("")}</div>
-${S.groups.some(g=>vis(g).length)?'':'<p class="sub">まだ体操が設定されていません。担当の先生にご確認ください。</p>'}<div class="foot"><button data-act="edit">${edit?'編集を終わる':'先生用:体操・動画を編集'}</button></div>`}
+${S.groups.some(g=>vis(g).length)?'':'<p class="sub">まだ体操が設定されていません。担当の先生にご確認ください。</p>'}${S.patient?'':'<div class="foot"><button data-act="edit">'+(edit?'編集を終わる':'先生用:体操・動画を編集')+'</button></div>'}`}
 function group(){const g=S.groups.find(x=>x.id===gid);
 return`<button class="back" data-act="home">‹ 戻る</button><h2>${esc(g.name)}</h2>${vis(g).map(itemHTML).join("")||'<p class="sub">体操がまだありません。</p>'}
 ${edit?`<button class="btn small" data-act="add">+ 体操を追加</button>`:""}
-<div class="foot"><button data-act="edit">${edit?'編集を終わる':'先生用:体操・動画を編集'}</button></div>`}
+${S.patient?'':'<div class="foot"><button data-act="edit">'+(edit?'編集を終わる':'先生用:体操・動画を編集')+'</button></div>'}`}
 function calendar(){const y=cm.getFullYear(),m=cm.getMonth(),first=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate();let cells="";
 ["日","月","火","水","木","金","土"].forEach(w=>cells+=`<div class="h">${w}</div>`);
 for(let i=0;i<first;i++)cells+="<div></div>";
@@ -128,7 +129,7 @@ if(act==="home")view="home";
 else if(act==="cal")view="cal";
 else if(act==="grp"){view="group";gid=id}
 else if(act==="tog"){const l=S.log[T]||(S.log[T]=[]),i=l.indexOf(id);i>=0?l.splice(i,1):l.push(id);save()}
-else if(act==="edit")edit=!edit;
+else if(act==="edit"){if(!S.patient)edit=!edit}
 else if(act==="sel"){const it=raw().find(i=>i.id===id);it.on=it.on===false;save();link=""}
 else if(act==="mk"){const p=S.groups.map(g=>({id:g.id,name:g.name,items:g.items.filter(i=>i.on!==false).map(i=>({id:i.id,name:i.name,reps:i.reps,desc:i.desc,url:i.url}))})).filter(g=>g.items.length);link=p.length?location.href.split("#")[0]+"#m="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(p))))):"";copied=false}
 else if(act==="cp"){try{navigator.clipboard.writeText(link)}catch(e){}copied=true}
